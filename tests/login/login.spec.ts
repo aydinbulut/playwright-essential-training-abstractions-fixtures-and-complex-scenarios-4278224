@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { LoginPage } from "../../lib/pages/login.page";
+import { registerUser } from "../../lib/datafactory/register";
 
 test("login without page object", async ({ page }) => {
   await page.goto("https://practicesoftwaretesting.com/");
@@ -25,5 +26,23 @@ test("login with page object", async ({ page }) => {
   await loginPage.login(email, password);
 
   await expect(page.getByTestId("nav-menu")).toContainText("Jane Doe");
+  await expect(page.getByTestId("page-title")).toContainText("My account");
+});
+
+test("login with newly registered user", async ({ page }) => {
+  // unique email for each test run
+  const email = `aydin_bulut_${Date.now()}@epam.com`;
+  const password = "123456Pst*";
+
+  // create user via API so that we can test login functionality standalone
+  const createdUserData = await registerUser(email, password);
+
+  // login with newly created user
+  const loginPage = new LoginPage(page);
+  await loginPage.goto();
+  await loginPage.login(email, password);
+
+  // assertions to verify successful login
+  await expect(page.getByTestId("nav-menu")).toContainText(`${createdUserData.first_name} ${createdUserData.last_name}`);
   await expect(page.getByTestId("page-title")).toContainText("My account");
 });
