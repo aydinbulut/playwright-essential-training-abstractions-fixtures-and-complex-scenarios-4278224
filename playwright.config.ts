@@ -1,4 +1,4 @@
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig, devices, expect } from "@playwright/test";
 
 /**
  * Read environment variables from file.
@@ -89,4 +89,22 @@ export default defineConfig({
   //   url: 'http://127.0.0.1:3000',
   //   reuseExistingServer: !process.env.CI,
   // },
+});
+
+// create custom assertions for Playwright's expect
+expect.extend({
+  toBeNumber(received: number) {
+    const check = typeof received === "number" && !isNaN(received);
+    if (check) {
+      return {
+        message: () => 'passed',
+        pass: true,
+      };
+    } else {
+      return {
+        message: () => `toBeNumber() assertion failed.\nYou expected '${received}' to be a number, but it is of type '${typeof received}'`,
+        pass: false,
+      };
+    }
+  }
 });
