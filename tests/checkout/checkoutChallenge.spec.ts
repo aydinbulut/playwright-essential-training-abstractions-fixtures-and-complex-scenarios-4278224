@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { randomState } from "../../lib/helpers/states";
+import { randomState } from "@helpers/states";
 
 test.describe("Checkout challenge", async () => {
   test.use({ storageState: ".auth/customer01.json" });
