@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { harFilePath } from "@helpers/harFilePath";
 
 test.describe("Home page with no auth", () => {
   test.beforeEach(async ({ page }) => {
@@ -84,5 +85,59 @@ test.describe("Home page customer 01 auth", () => {
       await expect(productGrid).toContainText(product.name);
       await expect(productGrid).toContainText(product.price.toString());
     }
+  });
+
+  // test example to show how to modify API response
+  test("validate product data is visible from modified API", async ({ page }) => {
+    await test.step("override /products", async () => {
+
+      // register a route to intercept network request once it will happen
+      await page.route(
+        "https://api.practicesoftwaretesting.com/products**",
+        async (route) => {
+          const response = await route.fetch();
+          const json = await response.json();
+
+          // modify the response data
+          json.data[0].name = "Mokced Product";
+          json.data[0].price = 100000.01;
+          json.data[0].in_stock = false;
+
+          // fulfill the route with the modified data, without these the changes won't be applied
+          await route.fulfill({ response, json });
+        }
+      );
+    });
+
+    await page.goto("/");
+
+    // wait for loading skeleton to disappear before assertions, this ensures products are loaded
+    await expect(page.locator(".skeleton").first()).not.toBeVisible();
+
+    const productGrid = page.locator(".col-md-9");
+    const firstProduct = productGrid.getByRole("link").first();
+
+    await expect(firstProduct).toContainText("Mokced Product");
+    await expect(firstProduct).toContainText("Out of stock");
+  });
+
+  test("validate product data is loaded from har file", async ({ page }) => {
+    // register a route to intercept network request once it will happen, but this time from HAR file
+    await test.step("Mock /products", async () => {
+      await page.routeFromHAR(harFilePath('product'), {
+        url: 'https://api.practicesoftwaretesting.com/products**',
+        update: false
+      });
+    });
+
+    await page.goto("/");
+
+    // wait for loading skeleton to disappear before assertions, this ensures products are loaded
+    await expect(page.locator(".skeleton").first()).not.toBeVisible();
+
+    const productGrid = page.locator(".col-md-9");
+
+    await expect(productGrid).toContainText("Happy Path Pliers");
+    await expect(productGrid).toContainText("1.99");
   });
 });
