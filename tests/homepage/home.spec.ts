@@ -61,4 +61,34 @@ test.describe("Home page customer 01 auth", () => {
     await expect(page.getByTestId("nav-sign-in")).not.toBeVisible();
     await expect(page.getByTestId("nav-menu")).toContainText("Jane Doe");
   });
+
+  test("validate product data is visible in UI from API", async ({ page }) => {
+    let products: any;
+
+    await test.step("intercept /products API endpoint and validate data", async () => {
+      // intercept the /products API call to grab the response data, this registers a route handler for a call that will happen later
+      await page.route(`${process.env.API_URL}/products**`, async (route) => {
+        const response = await route.fetch();
+
+        // store the response data in the products variable
+        products = await response.json();
+
+        // continue the request to let the UI render
+        route.continue();
+      });
+    });
+
+    await page.goto("/");
+
+    // wait for the skeleton loader to disappear before checking for product data existence
+    // Palywright will wait before proceeding furhter with the testing or timeout here if the loader never goes away
+    await expect(page.locator(".skeleton").first()).not.toBeVisible();
+
+    const productGrid = page.locator(".col-md-9");
+
+    for (const product of products.data) {
+      await expect(productGrid).toContainText(product.name);
+      await expect(productGrid).toContainText(product.price.toString());
+    }
+  });
 });
